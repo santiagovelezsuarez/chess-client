@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Chess Game</title>
+    <meta name="author" content="Student name">
+    <meta name="email" content="Student email">
+    <link rel="stylesheet" href="chess.css">
+    <script src="https://kit.fontawesome.com/138b07968d.js" crossorigin="anonymous"></script>
+    <script src="game.js"></script>
+    <script src="board.js"></script>
+    <script src="server.js"></script>
+    <script>
+        /*
+         * save a reference of your server here so it can be used in the 
+         * functions below
+         */
+         var server = new Server();          
+         var game = new Game();
+         var board;
+        /**
+         * Initializes the game
+         */
+        function initialize() 
+        {
+            //var game = new Game();                       
+            board = new Board(document.getElementById("board"), pieces);
+            game.onMove = (piece,pos) =>
+            {
+                board.setPiecePosition(piece,pos);
+            };
+            game.onCapture = (piece) => {
+                board.removePiece(piece.id);
+            };
+
+            //board.setPiecePositions(game.positions);
+            board.onPieceDragged = (pId, pos) =>
+            {                
+                return game.movePiece(pId,pos);
+                //server.move(pieces[pId], pos);
+            };
+
+
+            server.onMove = (piece, pos) => {
+                game.movePiece(piece, pos);
+            };  
+            
+            // pieces["a3"] = pieces["a1"];
+            // pieces["a3"].id = "a3";
+
+            // pieces["a6"] = pieces["a8"];
+            // pieces["a6"].id = "a6";
+
+            // pieces["e3"] = pieces["c1"];
+            // pieces["e3"].id = "e3";
+
+            // pieces["b6"] = pieces["a8"];
+            // pieces["b6"].id = "b6";
+
+            // pieces["d3"] = pieces["d1"];
+            // pieces["d3"].id = "d3";
+
+            // pieces["e3"] = pieces["e1"];
+            // pieces["e3"].id = "e3";
+        }
+
+        /**
+         * Allows the user to join a new game
+         */
+        function joinGame() {
+            // validate the username given by the user and ask the server to join a game
+        }
+    </script>
+</head>
+
+<body onload="initialize()">
+    <!-- HTML for the login form -->
+    <div id="board"></div>
+    <!-- HTML for the list of moves -->
+    <!-- HTML for the messages -->
+</body>
+</html>

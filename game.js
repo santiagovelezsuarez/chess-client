@@ -41,16 +41,20 @@ const defaultPositions = {};
 /**
  * Represents a piece of the chess game
  */
-class Piece {
-    constructor(id, type, color) {
+class Piece 
+{
+    constructor(id, type, color) 
+    {
         this.id = id;
         this.type = type;
         this.color = color;
     }
-    label() {
+    label()
+    {
         return type + this.getPositionName();
     }
-    getPositionName() {
+    getPositionName() 
+    {
         return this.position.col + this.position.row;
     }   
 }
@@ -58,8 +62,10 @@ class Piece {
 /**
  * Represents a move in the chess game
  */
-class Move {
-    constructor(piece, position) {
+class Move 
+{
+    constructor(piece, position) 
+    {
         this.piece = piece;
         this.position = position;
     }
@@ -68,8 +74,10 @@ class Move {
 /**
  * Represents the logic of a game of chess
  */
-class Game {
-    constructor() {
+class Game 
+{
+    constructor() 
+    {
         this.positions = [];
         this.turn = WHITE;
         this.moves = [];

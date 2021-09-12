@@ -98,12 +98,16 @@ class Game
 
     movePiece(piece, pos)
     {
+        if(pieces[this.positions[pos]]?.type == KING)
+            return false;
         //piece = this.positions
         console.log("game.movePiece(",piece,pos,")");
         let cm = this.can_move(piece, pos);
-        console.log("cm: ",cm);
+        //console.log("cm: ",cm);
         if(cm)
         {
+            if(this.positions[pos])
+                game.onCapture(pieces[this.positions[pos]]);
             this.positions[pos] = piece.id;
             this.positions[piece.position] = undefined;    
             piece.position =  pos;       
@@ -134,7 +138,7 @@ class Game
 
     can_move_king(piece,posf)
     {
-        let pos = pos2Coord(piece.id);
+        let pos = pos2Coord(piece.position);
         let posfc = pos2Coord(posf);
 
         let move = {x:0,y:0};
@@ -149,7 +153,7 @@ class Game
             move.y = -1;
                       
         let lng = Math.abs((posfc.y - pos.y))>Math.abs((posfc.x - pos.x))?Math.abs((posfc.y - pos.y)):Math.abs((posfc.x - pos.x));   
-        console.log("lng: ",lng);     
+        //console.log("lng: ",lng);     
         let m = this.validDirection(pos, posfc, move) && lng == 1 && this.inBoard(posfc) && !this.isOccpByColor(posf, piece.color);         
          
         
@@ -188,29 +192,31 @@ class Game
     {  
         let posi = pos2Coord(piece.position);                    
         let posfc = pos2Coord(pos);
-        console.log("posI: ",posi);
-        console.log("posF: ",posfc);
+        //console.log("posI: ",posi);
+        //console.log("posF: ",posfc);
         let h = Math.abs(posfc.x - posi.x);
         let v = Math.abs(posfc.y - posi.y);
-        console.log("isOccpByColor(",posfc,",",piece.color,"): ",this.isOccpByColor(posfc, piece.color))
-        let occ = this.isOccpByColor(posfc, piece.color);
-        console.log("occ: ",occ);
-        if(h*v == 2 && !this.isOccpByColor(posfc, piece.color))                    
+        //console.log("isOccpByColor(",posfc,",",piece.color,"): ",this.isOccpByColor(posfc, piece.color))
+        let occ = this.isOccpByColor(pos, piece.color);
+        //console.log("occ: ",occ);
+        if(h*v == 2 && !this.isOccpByColor(pos, piece.color))                    
             return true;    
         return false;        
     }
     
     can_move_rook(piece,posf)
     {
-        let pos = pos2Coord(piece.id);
+        let pos = pos2Coord(piece.position);
         let posfc = pos2Coord(posf);
         let m1 = this.validDirection(pos, posfc, {x:0,y:1}) && this.inBoard(posfc) && this.voidPath(pos,posfc,{x:0,y:1}) && !this.isOccpByColor(posf, piece.color);
-        let m2 = this.validDirection(pos, posfc, {x:1,y:0}) && this.inBoard(posfc) && this.voidPath(pos,posfc,{x:1,y:0}) && !this.isOccpByColor(posf, piece.color);  
+        let m2 = this.validDirection(pos, posfc, {x:1,y:0}) && this.inBoard(posfc) && this.voidPath(pos,posfc,{x:1,y:0}) && !this.isOccpByColor(posf, piece.color); 
+        let m3 = this.validDirection(pos, posfc, {x:0,y:-1}) && this.inBoard(posfc) && this.voidPath(pos,posfc,{x:0,y:-1}) && !this.isOccpByColor(posf, piece.color); 
+        let m4 = this.validDirection(pos, posfc, {x:-1,y:0}) && this.inBoard(posfc) && this.voidPath(pos,posfc,{x:-1,y:0}) && !this.isOccpByColor(posf, piece.color); 
         // console.log("m1");
         // console.log(m1);
         // console.log("m2");
         // console.log(m2);    
-        return m1 || m2;
+        return m1 || m2 || m3 || m4;
     }
 
     inBoard(pos)
@@ -227,9 +233,12 @@ class Game
         let m1 = this.validDirection(pos, posfc, move) && lng <= this.getMaxLpawn(piece) && !this.isOccp(posf) && this.voidPath(pos,posfc,move) && this.inBoard(posfc);             
         //captura
         move.x = 1;
-        let m2 = this.validDirection(pos, posfc, move) && this.isOccpByColor(posf, piece.color==WHITE?BLACK:WHITE) && this.inBoard(posfc);   
+        let m2 = this.validDirection(pos, posfc, move) && this.isOccpByColor(posf, piece.color==WHITE?BLACK:WHITE) && this.inBoard(posfc);       
         // console.log("m1");
         // console.log(m1);
+        // console.log("isOcc: ",this.isOccpByColor(posf, piece.color==WHITE?BLACK:WHITE));
+        // console.log("posF: ",posf);
+        // console.log("Color: ",piece.color==WHITE?BLACK:WHITE);
         // console.log("m2");
         // console.log(m2);
         return m1 || m2;
@@ -253,7 +262,7 @@ class Game
 
     isOccp(pos)
     {
-        console.log("isOcc(248): ",this.positions[pos], "pos: ",pos)
+        //console.log("isOcc(248): ",this.positions[pos], "pos: ",pos)
         if(this.positions[pos])
             return true;
         return false;
@@ -261,13 +270,13 @@ class Game
 
     isOccpByColor(pos, color)
     {  
-        console.log("isOccByColor: ",this.positions[coord2Pos(pos)], "color: ",color)   
-        console.log("positions(d2): ",this.positions[coord2Pos(pos)]);
-        if(this.isOccp(coord2Pos(pos)))
+        //console.log("isOccByColor: ",this.positions[coord2Pos(pos)], "color: ",color)   
+        //console.log("positions(d2): ",this.positions[coord2Pos(pos)]);
+        if(this.isOccp(pos))
         {
             //console.log("isOcc: T");
             //console.log("piece: ",pieces[this.positions[coord2Pos(pos)]]);
-            return pieces[this.positions[coord2Pos(pos)]]?.color==color?true:false;
+            return pieces[this.positions[pos]]?.color==color?true:false;
         }
         return false;  
         //return this.positions[coord2Pos(pos)]?.color==color?true:false;           
@@ -282,7 +291,7 @@ class Game
         //console.log("n = ",n);  
         let xi=posi.x;
         let yi=posi.y;   
-        console.log("dir x:",dir.x," dir y:",dir.y)   
+        //console.log("dir x:",dir.x," dir y:",dir.y)   
         for(let i=0; i<n; i++)
         {
             xi+=dir.x;

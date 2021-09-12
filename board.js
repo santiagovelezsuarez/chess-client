@@ -82,9 +82,11 @@
     
     }
 
-    removePiece(piece) 
+    removePiece(pieceId) 
     {
-    
+        //document.getElementById("pieces").appendChild(document.getElementById("-d7"));
+        this.setPiecePosition(pieces[pieceId], "pieces");
+        //console.log("Remove Piece: ", pieceId);
     }    
 
     dropFn(ev)
@@ -94,7 +96,7 @@
         //console.log("data: "+data);        
         //let piece = pieces[data.substr(data.indexOf('-')+1)];
         let id = data.substr(data.indexOf('-')+1);
-        console.log(data.substr(data.indexOf('-')+1));
+        //console.log(data.substr(data.indexOf('-')+1));
         let pos = ev.target.id;
         //console.log("(piece,pos) : ("+piece,pos+")");
         //console.log("To: "+ev.target.id);

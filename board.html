@@ -68,7 +68,7 @@
          * Allows the user to join a new game
          */
         function joinGame() {
-            // validate the username given by the user and ask the server to join a game
+            server.join();
         }
     </script>
 </head>
@@ -78,6 +78,7 @@
     <div id="board"></div>
     <!-- HTML for the list of moves -->
     <!-- HTML for the messages -->
+    <button onclick="joinGame()">join</button>
     <div id="pieces"></div>
 </body>
 </html>

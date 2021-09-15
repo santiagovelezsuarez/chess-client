@@ -6,10 +6,14 @@ const CHECK = 1;
 const CHECK_MATE = 2;
 const NO_CHECK = 0;
 
-class Converter 
-{
-    toString(game, piece, position, prevPosition, isCapture, promotedType) 
-    {
+class Converter {
+    /**
+     * 
+     * @param {Game} game 
+     * @param {Move} move 
+     * @returns {string} the move in standard chess notation
+     */
+    toString(game, move) {
         /*
          * <P>?<col/row>x?<pos>+?+?
          * 0-0
@@ -17,37 +21,37 @@ class Converter
          * <pos>=<P>
          * <color>x
          */
+        let piece = move.piece;
+        let position = move.position;
+        let prevPosition = move.prevPosition;
+
         let castle = this.isCastle(piece, position, prevPosition);
-        let ambiguity = this.getAmbiguity(game, piece, position);
-        let isPromotion = this.isPromotion(piece, pos);
-        let check = this.getCheck();
-        if (castle != NO_CASTLE) 
-        {
+        let ambiguity = this.getAmbiguity(game, piece, position, prevPosition);
+        let isPromotion = this.isPromotion(piece, position);
+        let check = this.getCheck(game, piece, position);
+        if (castle != NO_CASTLE) {
             return castle == SHORT_CASTLE ? "0-0" : "0-0-0";
         }
-        if (isPromotion) 
-        {
-            return pos + "=" + promotedType;
+        let moveStr = "";
+        if (piece.type != PAWN) {
+            moveStr += piece.type;
         }
-        let move = "";
-        if (piece.type != PAWN) 
-        {
-            move += piece.type;
+        if (ambiguity != null) {
+            moveStr += ambiguity;
         }
-        if (ambiguity != null) 
-        {
-            move += ambiguity;
+        if (move.isCapture) {
+            if (piece.type == PAWN) // if a pawn is capturing, use the column
+                moveStr += move.prevPosition.charAt(0);
+            moveStr += "x";
         }
-        if (isCapture) 
-        {
-            move += "x";
+        moveStr += position;
+        if (isPromotion) {
+            return moveStr + "=" + promotedType;
         }
-        move += pos;
-        if (check != NO_CHECK) 
-        {
-            move += check == CHECK ? "+" : "++";
+        if (check != NO_CHECK) {
+            moveStr += check == CHECK ? "+" : "++";
         }
-        return move;
+        return moveStr;
     }
 
     /**
@@ -57,17 +61,14 @@ class Converter
      * @param {string} prevPosition
      * @return {number} return LONG_CASTLE, SHORT_CASTLE or NO_CASTLE
      */
-    isCastle(piece, position, prevPosition) 
-    {
-        if (piece.type != KING) 
-        {
+    isCastle(piece, position, prevPosition) {
+        if (piece.type != KING) {
             return NO_CASTLE;
         }
         let xyPrevPosition = pos2Coord(prevPosition);
         let xyNextPosition = pos2Coord(position);
         let dx = xyNextPosition.x - xyPrevPosition.x;
-        if (Math.abs(dx) != 2) 
-        {
+        if (Math.abs(dx) != 2) {
             return NO_CASTLE;
         }
         return dx > 0 ? SHORT_CASTLE : LONG_CASTLE;
@@ -80,53 +81,48 @@ class Converter
      * @param {string} position 
      * @return {char} The row number, column letter or null
      */
-    getAmbiguity(game, piece, position) 
-    {
+    getAmbiguity(game, piece, position, prevPosition) {
 
         //Filter all pieces by color, type, and different than param piece
-        let siblings = pieces.filter((s) => {
-            if (s.color == piece.color & s != piece & s.type == piece.type) return true;
-            else return false
+        let siblings = Object.values(pieces).filter((s) => {
+            return s.color == piece.color 
+                && s != piece 
+                && s.type == piece.type
+                && game.getPiecePosition(s) != null;
         });
         //If no siblings, exit function
-        if (siblings.length == 0) return false;
-        else 
-        {
+        if (siblings.length == 0) 
+            return null;
+        else {
             let sibling = undefined;
             let sameX = false;
-            let sameY = true;
+            let sameY = false;
             let difference = "";
             //Check each sibling
-            for (let i = 0; i < siblings.length; i++)
-            {
+            for (let i = 0; i < siblings.length; i++) {
                 //Check all siblings
                 sibling = siblings[i];
                 //Check if any sibling shares row or column
-                if (sibling.canMove(position)) 
-                {
-                    if (!sameX) sameX = sibling.getPosition().charAt(0) == piece.getPosition().charAt(0);
-                    if (!sameY) sameY = sibling.getPosition().charAt(1) == piece.getPosition().charAt(1);
+                if (game.canMove(sibling, position)) {
+                    if (!sameX) sameX = game.getPiecePosition(sibling).charAt(0) == prevPosition.charAt(0);
+                    if (!sameY) sameY = game.getPiecePosition(sibling).charAt(1) == prevPosition.charAt(1);
                 }
             }
             //If piece shares row or column with any available piece, add row or column to difference
-            if (sameX) difference += piece.getPosition().charAt(0);
-            if (sameY) difference += piece.getPosition().charAt(1);
+            if (sameY) difference += prevPosition.charAt(0);
+            if (sameX) difference += prevPosition.charAt(1);
             //return difference
             if (difference != "") return difference;
-            else return false;
+            else return null;
         }
     }
 
-    isPromotion(piece, pos)
-    {
-        /*Verifica que sea peón y dependiendo del color 
-         *que haya llegado primera o última fila correspondientemente*/
-        if (piece.type != PAWN)
-        {
+    isPromotion(piece, position) {
+        /* Verifica que sea peón y dependiendo del color 
+         * que haya llegado primera o última fila, respectivamente */
+        if (piece.type != PAWN) {
             return false;
-        } 
-        else if (piece.type == PAWN)
-        {
+        } else if (piece.type == PAWN) {
             let color = piece.color;
             let row = parseInt(position.charAt(1));
             return row === (color === WHITE ? 8 : 1);
@@ -140,28 +136,30 @@ class Converter
      * @param {string} pos 
      * @return {number} CHECK, CHEK_MATE or NO_CHECK
      */
-    getCheck(game, piece, pos) 
-    {
-        let color = game.turn;
+    getCheck(game, piece, pos) {
+        let color = game.getTurn();
         let kingPos;
 
-        for (let piece in pieces) 
-        {
-            if (piece.type == KING && piece.color != color)
-                kingPos = game.positions[piece.id];
+        for (let pId in pieces) {
+            let piece = pieces[pId];
+            if (piece.type == KING && piece.color == color)
+                kingPos = game.getPiecePosition(piece);
         }
 
-        return game.can_move(piece, kingPos) ? CHECK : NO_CHECK;
+        return game.canMove(piece, kingPos) ? CHECK : NO_CHECK;
     }
 
     toPieceAndPos(game, move) {
         /*
-         * <P>?<col/row>x?<pos>+?+?
+         * <P>?<col/row>x?<pos>=<type>+?+?
          * 0-0
          * 0-0-0
-         * <pos>=<P>
          * <color>x
          */
+        let asCastle = this.parseCastle();
+        if (asCastle != null) return asCastle;
+
+        return this.parseMove(game, move);
     }
 
     /**
@@ -169,27 +167,20 @@ class Converter
      * @param {string} move 
      * @return {{piece: Piece, pos: string}|null}
      */
-    parseCastle(game, move) 
-    {
+    parseCastle(game, move) {
         let piece;
         let pos = "";
-        if (move === "0-0" || move === "0-0-0")
-        {
+        if (move === "0-0" || move === "0-0-0") {
             move === "0-0-0" ? pos = H : pos = A;
-            if (game.turn === WHITE) 
-            {
+            if (game.getTurn() === WHITE) {
                 piece = game.pieces.find(piece => piece.id === D + '1');
                 pos += "1";
-            }
-            else 
-            {
+            } else {
                 piece = game.pieces.find(piece => piece.id === D + '8');
                 pos += "8";
             }
             return ({ "piece": piece, "pos": pos });
-        } 
-        else 
-        {
+        } else {
             return null
         }
     }
@@ -198,35 +189,42 @@ class Converter
      * 
      * @param {Game} game 
      * @param {string} move 
-     * @return {{piece: Piece, pos: string, promotionType: string} | null}
-     */
-    parsePromotion(game, move) 
-    {
-
-    }
-
-    /**
-     * 
-     * @param {Game} game 
-     * @param {string} move 
      * @return {char|null} WHITE, BLACK or null
      */
-    parseResign(game, move) 
-    {
-
+    parseResign(game, move) {
+        const moveRegex = /([rw])x/;
+        let match = move.match(moveRegex);
+        if (match == null) return null;
+        return match[1] == 'b' ? BLACK : WHITE;
     }
 
     /**
      * 
      * @param {Game} game 
      * @param {string} move 
-     * @return {{piece: Piece, pos: string}|null}
+     * @return {{piece: Piece, pos: string, promotionType: char}|null}
      */
-    parseMove(game, move) 
-    {
+    parseMove(game, move) {
         //<P>?<col/row>?x?<pos>+?+? 
-        const moveRegex = /(?P[RNBKQ]?)([12345678abcdefgh]?x?([abcdefgh][12345678])\+?)/;
-        move.match(moveRegex);
+        const moveRegex = /([RNBKQ])?([12345678abcdefgh])?x?([abcdefgh][12345678])(?:=([RNBQ]))?(\+?\+?)?/;
+        let match = move.match(moveRegex);
+        if (match == null) return null;
+        let pType = match[1] === undefined ? PAWN : match[1].charAt(0);
+        let disamb = match[2];
+        let pos = match[3];
+        let promotionType = match[4];
+        let color = game.getTurn();
+        let possiblePieces = Object.values(pieces).filter((p) => {
+            return p.type == pType 
+                && p.color == color 
+                && game.canMove(p, pos)
+                && (!disamb || game.getPiecePosition(p).indexOf(disamb) != -1);
+        });
+        if (possiblePieces.length == 0)
+            throw new Error("Move is invalid");
+        if (possiblePieces.length > 1)
+            throw new Error("Ambiguous move");
+        return {piece: possiblePieces[0], pos: pos, promotionType: promotionType};
     }
 
 }
